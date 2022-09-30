@@ -4,6 +4,10 @@
 #define PIXEL_PIN   8
 #define PIXEL_COUNT 5
 
+#define JOYSTICK_DEADZONE_UB -2
+#define JOYSTICK_DEADZONE_LB -6
+#define JOYSTICK_SENSITIVITY 2
+
 Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_Arcada arcada;
 
@@ -28,11 +32,12 @@ struct Platform {
   int x_pos;
   int width;
   int height;
+  int plat_v;
 };
 
 Ball pBall = { 20, 20, 0, 0, 5 };
-Platform player_plat = {10, 50, 10, 20};
-Platform ai_plat = {10, 50, 10, 20};
+Platform player_plat = {10, 50, 10, 20, 0};
+Platform ai_plat = {10, 50, 10, 20, 0};
 
 void setup() {
   Serial.begin(9600);
@@ -48,11 +53,21 @@ void setup() {
 }
 
 void process_input() {
-  
+  int joyY = arcada.readJoystickY();
+  Serial.println(joyY);
+  if (joyY < JOYSTICK_DEADZONE_LB) {
+    player_plat.plat_v = JOYSTICK_SENSITIVITY * -1;
+  } else if (joyY > JOYSTICK_DEADZONE_UB) {
+    player_plat.plat_v = JOYSTICK_SENSITIVITY;
+  } else {
+    player_plat.plat_v = 0;
+  }
 }
 
 void update() {
-  
+  player_plat.y_pos += player_plat.plat_v;
+//  pBall.x_pos += pBall.x_vel;
+//  pBall.y_pos += pBall.y_vel;
 }
 
 void draw() {
