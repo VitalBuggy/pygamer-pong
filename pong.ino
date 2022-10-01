@@ -28,16 +28,16 @@ struct Ball {
 };
 
 struct Platform {
-  int y_pos;
   int x_pos;
+  int y_pos;
   int width;
   int height;
   int plat_v;
 };
 
-Ball pBall = { 20, 20, 0, 0, 5 };
-Platform player_plat = {10, 50, 10, 20, 0};
-Platform ai_plat = {10, 50, 10, 20, 0};
+Ball pBall = { 80, 64, -1, 1, 2 };
+Platform player_plat = { 0, 50, 3, 30, 0 };
+Platform ai_plat = { 157, 50, 3, 30, 0 };
 
 void setup() {
   Serial.begin(9600);
@@ -54,30 +54,69 @@ void setup() {
 
 void process_input() {
   int joyY = arcada.readJoystickY();
-  Serial.println(joyY);
+  uint8_t pressed_buttons = arcada.readButtons();
+
+  if (pressed_buttons & ARCADA_BUTTONMASK_A) {
+    Serial.print("A");
+    arcada.display->drawCircle(145, 100, 10, ARCADA_WHITE);
+  }
+  if (pressed_buttons & ARCADA_BUTTONMASK_B) {
+    Serial.print("B");
+    arcada.display->drawCircle(120, 100, 10, ARCADA_WHITE);
+  }
+  
   if (joyY < JOYSTICK_DEADZONE_LB) {
     player_plat.plat_v = JOYSTICK_SENSITIVITY * -1;
+    ai_plat.plat_v = JOYSTICK_SENSITIVITY * -1;
   } else if (joyY > JOYSTICK_DEADZONE_UB) {
     player_plat.plat_v = JOYSTICK_SENSITIVITY;
+    ai_plat.plat_v = JOYSTICK_SENSITIVITY;
   } else {
     player_plat.plat_v = 0;
+    ai_plat.plat_v = 0;
   }
 }
 
+
 void update() {
-  player_plat.y_pos += player_plat.plat_v;
-//  pBall.x_pos += pBall.x_vel;
-//  pBall.y_pos += pBall.y_vel;
+//  Serial.println(player_plat.y_pos);
+
+  
+  if (pBall.y_pos == 128 - pBall.radius || pBall.y_pos == 0 + pBall.radius) {
+    pBall.y_vel *= -1;
+  }
+  
+
+  if (pBall.x_pos == player_plat.x_pos + player_plat.width + pBall.radius && (pBall.y_pos > player_plat.y_pos && pBall.y_pos < player_plat.y_pos + player_plat.height)) {
+    pBall.x_vel *= -1;
+  }
+
+  if (pBall.x_pos == ai_plat.x_pos - ai_plat.width + pBall.radius && (pBall.y_pos > ai_plat.y_pos && pBall.y_pos < ai_plat.y_pos + ai_plat.height)) {
+    pBall.x_vel *= -1;
+  }
+
+  if ((player_plat.y_pos + player_plat.height < 128 && player_plat.plat_v > 0) || player_plat.y_pos > 0 && player_plat.plat_v < 0) {
+    player_plat.y_pos += player_plat.plat_v;
+  }
+
+  if ((ai_plat.y_pos + ai_plat.height < 128 && ai_plat.plat_v > 0) || ai_plat.y_pos > 0 && ai_plat.plat_v < 0) {
+    ai_plat.y_pos += ai_plat.plat_v;
+  }
+
+  
+  pBall.x_pos += pBall.x_vel;
+  pBall.y_pos += pBall.y_vel;
 }
 
 void draw() {
   arcada.display->fillScreen(ARCADA_BLACK);
   arcada.display->fillCircle(pBall.x_pos, pBall.y_pos, pBall.radius, ARCADA_WHITE);
   arcada.display->fillRect(player_plat.x_pos, player_plat.y_pos, player_plat.width, player_plat.height, ARCADA_WHITE);
-  delay(10);
+  arcada.display->fillRect(ai_plat.x_pos, ai_plat.y_pos, ai_plat.width, ai_plat.height, ARCADA_WHITE);
 }
 
 void loop() {
+  delay(10);
   if (GAME_STATE == 1) {
     process_input();
     update();
