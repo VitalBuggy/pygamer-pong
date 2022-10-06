@@ -35,7 +35,7 @@ struct Platform {
   int plat_v;
 };
 
-Ball pBall = { 80, 64, -1, 1, 2 };
+Ball pBall = { 80, 64, 2, 1, 2 };
 Platform player_plat = { 0, 50, 3, 30, 0 };
 Platform ai_plat = { 157, 50, 3, 30, 0 };
 
@@ -87,7 +87,7 @@ void update() {
   }
   
 
-  if (pBall.x_pos == player_plat.x_pos + player_plat.width + pBall.radius && (pBall.y_pos > player_plat.y_pos && pBall.y_pos < player_plat.y_pos + player_plat.height)) {
+  if (pBall.x_pos == player_plat.x_pos + pBall.radius && (pBall.y_pos > player_plat.y_pos && pBall.y_pos < player_plat.y_pos + player_plat.height)) {
     pBall.x_vel *= -1;
   }
 
