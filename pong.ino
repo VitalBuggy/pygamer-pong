@@ -1,15 +1,23 @@
 #include <Adafruit_Arcada.h>
+#include <Adafruit_SPIFlash.h>
 #include <Adafruit_NeoPixel.h>
+
+uint32_t buttons, last_buttons;
 
 #define PIXEL_PIN   8
 #define PIXEL_COUNT 5
 
 #define JOYSTICK_DEADZONE_UB -2
 #define JOYSTICK_DEADZONE_LB -6
-#define JOYSTICK_SENSITIVITY 2
+#define JOYSTICK_SENSITIVITY 4
+
+#define BUTTON_CLOCK 48
+#define BUTTON_DATA 49
+#define BUTTON_LATCH 50
 
 Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_Arcada arcada;
+extern Adafruit_SPIFlash Arcada_QSPI_Flash;
 
 /*
 * Variable controlling the state of the game
@@ -17,7 +25,7 @@ Adafruit_Arcada arcada;
 * 1 -> Game running
 * 2 -> Pause
 */
-unsigned short int GAME_STATE = 1;
+unsigned short int GAME_STATE = 0;
 
 struct Ball {
   int x_pos;
@@ -35,9 +43,42 @@ struct Platform {
   int plat_v;
 };
 
-Ball pBall = { 80, 64, 2, 1, 2 };
+Ball pBall = { 80, 64, 2, 2, 2 };
 Platform player_plat = { 0, 50, 3, 30, 0 };
 Platform ai_plat = { 157, 50, 3, 30, 0 };
+
+volatile uint16_t milliseconds = 0;
+void timercallback() {
+  analogWrite(13, milliseconds);  // pulse the LED
+  if (milliseconds == 0) {
+    milliseconds = 255;
+  } else {
+    milliseconds--;
+  }
+}
+
+uint8_t read_buttons() {
+  uint8_t result = 0;
+  
+  pinMode(BUTTON_CLOCK, OUTPUT);
+  digitalWrite(BUTTON_CLOCK, HIGH);
+  pinMode(BUTTON_LATCH, OUTPUT);
+  digitalWrite(BUTTON_LATCH, HIGH);
+  pinMode(BUTTON_DATA, INPUT);
+  
+  digitalWrite(BUTTON_LATCH, LOW);
+  digitalWrite(BUTTON_LATCH, HIGH);
+  
+  for(int i = 0; i < 8; i++) {
+    result <<= 1;
+    //Serial.print(digitalRead(BUTTON_DATA)); Serial.print(", ");
+    result |= digitalRead(BUTTON_DATA);
+    digitalWrite(BUTTON_CLOCK, HIGH);
+    digitalWrite(BUTTON_CLOCK, LOW);
+  }
+  Serial.println();
+  return result;
+}
 
 void setup() {
   Serial.begin(9600);
@@ -48,23 +89,26 @@ void setup() {
     arcada.setBacklight(i);
     delay(10);
   }
-  
+
   arcada.displayBegin();
+
+  if (!Arcada_QSPI_Flash.begin()){
+    Serial.println("Could not find flash on QSPI bus!");
+    arcada.display->setTextColor(ARCADA_RED);
+    arcada.display->println("QSPI Flash FAIL");
+  }
+  Serial.println("Reading QSPI ID");
+  Serial.print("JEDEC ID: 0x"); Serial.println(Arcada_QSPI_Flash.getJEDECID(), HEX);
+  arcada.display->setTextColor(ARCADA_GREEN);
+  arcada.display->print("QSPI Flash JEDEC 0x"); arcada.display->println(Arcada_QSPI_Flash.getJEDECID(), HEX);
+
+  buttons = last_buttons = 0;
+  arcada.timerCallback(1000, timercallback);
 }
 
 void process_input() {
   int joyY = arcada.readJoystickY();
-  uint8_t pressed_buttons = arcada.readButtons();
 
-  if (pressed_buttons & ARCADA_BUTTONMASK_A) {
-    Serial.print("A");
-    arcada.display->drawCircle(145, 100, 10, ARCADA_WHITE);
-  }
-  if (pressed_buttons & ARCADA_BUTTONMASK_B) {
-    Serial.print("B");
-    arcada.display->drawCircle(120, 100, 10, ARCADA_WHITE);
-  }
-  
   if (joyY < JOYSTICK_DEADZONE_LB) {
     player_plat.plat_v = JOYSTICK_SENSITIVITY * -1;
     ai_plat.plat_v = JOYSTICK_SENSITIVITY * -1;
@@ -115,9 +159,35 @@ void draw() {
   arcada.display->fillRect(ai_plat.x_pos, ai_plat.y_pos, ai_plat.width, ai_plat.height, ARCADA_WHITE);
 }
 
+void process_input_menu() {
+}
+
+void update_menu() {
+  Serial.println(read_buttons());
+  if (read_buttons() == 16) {
+    GAME_STATE = 1;
+  }
+  last_buttons = buttons;
+}
+
+void draw_menu() {
+  arcada.display->fillScreen(ARCADA_BLACK);
+  arcada.display->setTextColor(ARCADA_WHITE);
+  arcada.display->setCursor(66, 40);
+  arcada.display->setTextWrap(true);
+  arcada.display->print("PONG");
+  arcada.display->setCursor(40, 50);
+  arcada.display->print("Press START to begin");
+   
+}
+
 void loop() {
-  delay(10);
-  if (GAME_STATE == 1) {
+  delay(25);
+  if (GAME_STATE == 0) {
+    process_input_menu();
+    update_menu();
+    draw_menu();
+  } else if (GAME_STATE == 1) {
     process_input();
     update();
     draw();    
