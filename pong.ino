@@ -15,6 +15,9 @@ uint32_t buttons, last_buttons;
 #define BUTTON_DATA 49
 #define BUTTON_LATCH 50
 
+#define DEFAULT_BALL_X 80
+#define DEFAULT_BALL_Y 64
+
 Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_Arcada arcada;
 extern Adafruit_SPIFlash Arcada_QSPI_Flash;
@@ -128,8 +131,21 @@ void process_input() {
   }
 }
 
+uint8_t PLAYER_SCORE, AI_SCORE = 0;
 
 void update() {
+  if (pBall.x_pos + pBall.radius <= 0) {
+    AI_SCORE += 1;
+    pBall.x_pos = DEFAULT_BALL_X;
+    pBall.y_pos = DEFAULT_BALL_Y;
+  }
+
+  if (pBall.x_pos - pBall.radius >= 160) {
+    PLAYER_SCORE += 1;
+    pBall.x_pos = DEFAULT_BALL_X;
+    pBall.y_pos = DEFAULT_BALL_Y;
+  }
+  
   if (pBall.y_pos == 128 - pBall.radius || pBall.y_pos == 0 + pBall.radius) {
     pBall.y_vel *= -1;
   }
@@ -150,6 +166,9 @@ void update() {
     ai_plat.y_pos += ai_plat.plat_v;
   }
 
+  Serial.println(PLAYER_SCORE);
+  Serial.println(AI_SCORE);
+  Serial.println();
   
   pBall.x_pos += pBall.x_vel;
   pBall.y_pos += pBall.y_vel;
