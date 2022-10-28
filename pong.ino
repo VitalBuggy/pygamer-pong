@@ -102,12 +102,19 @@ void setup() {
   arcada.display->setTextColor(ARCADA_GREEN);
   arcada.display->print("QSPI Flash JEDEC 0x"); arcada.display->println(Arcada_QSPI_Flash.getJEDECID(), HEX);
 
+  arcada.display->setTextWrap(true);
+
   buttons = last_buttons = 0;
   arcada.timerCallback(1000, timercallback);
 }
 
 void process_input() {
   int joyY = arcada.readJoystickY();
+
+  if(read_buttons() == 8) {
+    // puase game
+    GAME_STATE = 2;
+  }
 
   if (joyY < JOYSTICK_DEADZONE_LB) {
     player_plat.plat_v = JOYSTICK_SENSITIVITY * -1;
@@ -123,14 +130,10 @@ void process_input() {
 
 
 void update() {
-//  Serial.println(player_plat.y_pos);
-
-  
   if (pBall.y_pos == 128 - pBall.radius || pBall.y_pos == 0 + pBall.radius) {
     pBall.y_vel *= -1;
   }
   
-
   if (pBall.x_pos == player_plat.x_pos + pBall.radius && (pBall.y_pos > player_plat.y_pos && pBall.y_pos < player_plat.y_pos + player_plat.height)) {
     pBall.x_vel *= -1;
   }
@@ -167,18 +170,35 @@ void update_menu() {
   if (read_buttons() == 16) {
     GAME_STATE = 1;
   }
-  last_buttons = buttons;
 }
 
 void draw_menu() {
   arcada.display->fillScreen(ARCADA_BLACK);
   arcada.display->setTextColor(ARCADA_WHITE);
   arcada.display->setCursor(66, 40);
-  arcada.display->setTextWrap(true);
   arcada.display->print("PONG");
-  arcada.display->setCursor(40, 50);
+  arcada.display->setCursor(20, 50);
   arcada.display->print("Press START to begin");
    
+}
+
+void process_input_pause() {
+  if (read_buttons() == 16) {
+    GAME_STATE = 1; 
+  }
+}
+
+void update_pause() {
+  
+}
+
+void draw_pause() {
+  arcada.display->fillScreen(ARCADA_BLACK);
+  arcada.display->setTextColor(ARCADA_WHITE);
+  arcada.display->setCursor(66, 40);
+  arcada.display->print("PAUSED");
+  arcada.display->setCursor(20, 50);
+  arcada.display->print("Press START to unpause");
 }
 
 void loop() {
@@ -191,5 +211,9 @@ void loop() {
     process_input();
     update();
     draw();    
+  } else if (GAME_STATE == 2) {
+    process_input_pause();
+    update_pause();
+    draw_pause();
   }
 }
