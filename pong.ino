@@ -29,7 +29,8 @@ extern Adafruit_SPIFlash Arcada_QSPI_Flash;
 * 2 -> Pause
 * 3 -> Game over
 */
-unsigned short int GAME_STATE = 0;
+uint8_t GAME_STATE = 0;
+uint8_t PLAYER_SCORE, AI_SCORE = 0;
 
 struct Ball {
   int x_pos;
@@ -112,6 +113,14 @@ void setup() {
   arcada.timerCallback(1000, timercallback);
 }
 
+void reset_game() {
+  pBall = { 80, 64, 2, 2, 2 };
+  player_plat = { 0, 50, 3, 30, 0 };
+  ai_plat = { 157, 50, 3, 30, 0 };
+  AI_SCORE = 0;
+  PLAYER_SCORE = 0;
+}
+
 void process_input() {
   int joyY = arcada.readJoystickY();
 
@@ -132,7 +141,6 @@ void process_input() {
   }
 }
 
-uint8_t PLAYER_SCORE, AI_SCORE = 0;
 
 void update() {
   if (pBall.x_pos + pBall.radius <= 0) {
@@ -232,7 +240,18 @@ void draw_pause() {
 }
 
 void game_over_menu() {
-  
+  if (read_buttons() == 32) {
+    reset_game();
+    GAME_STATE = 1;
+  }
+
+  arcada.display->setTextColor(ARCADA_WHITE);
+  arcada.display->setCursor(55, 40);
+  arcada.display->print("GAME OVER");
+  arcada.display->setCursor(20, 50);
+  arcada.display->print("Press A to play again");
+  arcada.display->setCursor(PLAYER_SCORE == 10 ? 59 : 62, 80);
+  arcada.display->print(PLAYER_SCORE == 10 ? "PLAYER WINS" : "AI WINS");
 }
 
 void loop() {
@@ -244,8 +263,8 @@ void loop() {
       draw_menu();
       break;
     case 1:
-      process_input();
       update();
+      process_input();
       draw();
       break;
     case 2:
@@ -255,5 +274,6 @@ void loop() {
       break;
     case 3:
       game_over_menu();
+      break;
   }
 }
