@@ -27,6 +27,7 @@ extern Adafruit_SPIFlash Arcada_QSPI_Flash;
 * 0 -> Start menu
 * 1 -> Game running
 * 2 -> Pause
+* 3 -> Game over
 */
 unsigned short int GAME_STATE = 0;
 
@@ -145,6 +146,10 @@ void update() {
     pBall.x_pos = DEFAULT_BALL_X;
     pBall.y_pos = DEFAULT_BALL_Y;
   }
+
+  if (PLAYER_SCORE == 10 || AI_SCORE == 10) {
+    GAME_STATE = 3;
+  }
   
   if (pBall.y_pos == 128 - pBall.radius || pBall.y_pos == 0 + pBall.radius) {
     pBall.y_vel *= -1;
@@ -179,6 +184,12 @@ void draw() {
   arcada.display->fillCircle(pBall.x_pos, pBall.y_pos, pBall.radius, ARCADA_WHITE);
   arcada.display->fillRect(player_plat.x_pos, player_plat.y_pos, player_plat.width, player_plat.height, ARCADA_WHITE);
   arcada.display->fillRect(ai_plat.x_pos, ai_plat.y_pos, ai_plat.width, ai_plat.height, ARCADA_WHITE);
+
+  arcada.display->setTextColor(ARCADA_WHITE);
+  arcada.display->setCursor(40, 10);
+  arcada.display->print(PLAYER_SCORE);
+  arcada.display->setCursor(120, 10);
+  arcada.display->print(AI_SCORE);
 }
 
 void process_input_menu() {
@@ -220,19 +231,29 @@ void draw_pause() {
   arcada.display->print("Press START to unpause");
 }
 
+void game_over_menu() {
+  
+}
+
 void loop() {
-  delay(25);
-  if (GAME_STATE == 0) {
-    process_input_menu();
-    update_menu();
-    draw_menu();
-  } else if (GAME_STATE == 1) {
-    process_input();
-    update();
-    draw();    
-  } else if (GAME_STATE == 2) {
-    process_input_pause();
-    update_pause();
-    draw_pause();
+  delay(20);
+  switch (GAME_STATE) {
+    case 0:
+      process_input_menu();
+      update_menu();
+      draw_menu();
+      break;
+    case 1:
+      process_input();
+      update();
+      draw();
+      break;
+    case 2:
+      process_input_pause();
+      update_pause();
+      draw_pause();
+      break;
+    case 3:
+      game_over_menu();
   }
 }
